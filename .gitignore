@@ -1,11 +1,19 @@
-# .gitignore para pet_classifier - versión específica
+# .gitignore para pet_classifier - carpetas vacías
 
-# Excluir completamente estos directorios y su contenido
-/models/
+# Excluir TODO el contenido de estas carpetas, pero mantener las carpetas principales
+/models/*
+!/models/.gitkeep
+
 /data/
-/static/
+!/data/.gitkeep
 
-# Archivos de Python generados
+/static/*
+!/static/.gitkeep
+
+# Excepciones específicas (opcional, si quieres algún archivo en esas carpetas)
+# !/data/README.md  # Ejemplo: si quieres incluir un archivo README en /data
+
+# Archivos generados por Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -15,17 +23,9 @@ venv/
 ENV/
 env/
 
-# Editor y IDE
+# Archivos temporales y de IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Archivos de sistema
 .DS_Store
-Thumbs.db
-
-# Archivos de entorno y sensibles
-.env
-*.env
-secrets.py
