@@ -1,149 +1,108 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pet Classifier - Clasificador de Perros/Gatos</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            color: #333;
-        }
-        h1 {
-            color: #2c3e50;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 10px;
-        }
-        h2 {
-            color: #2980b9;
-            margin-top: 25px;
-        }
-        code {
-            background: #f4f4f4;
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-family: 'Courier New', monospace;
-        }
-        pre {
-            background: #2c3e50;
-            color: #ecf0f1;
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
-        }
-        .note {
-            background: #e7f5fe;
-            border-left: 4px solid #3498db;
-            padding: 10px;
-            margin: 15px 0;
-        }
-        .warning {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 10px;
-            margin: 15px 0;
-        }
-        .terminal {
-            background: #2c3e50;
-            color: #ecf0f1;
-            padding: 10px 15px;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-        }
-    </style>
-</head>
-<body>
-    <h1>🐶🐱 Pet Classifier</h1>
-    <p>Clasificador de imágenes perros/gatos usando TensorFlow/Keras y Flask</p>
+# 🐶🐱 Sistema de Clasificación de Perros y Gatos
 
-    <h2>📋 Requisitos</h2>
-    <ul>
-        <li>Python 3.8+</li>
-        <li>TensorFlow 2.x</li>
-        <li>Flask</li>
-        <li>Flask-SocketIO</li>
-    </ul>
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.8%2B-blue" alt="Python">
+  <img src="https://img.shields.io/badge/Flask-3.0.2-green" alt="Flask">
+  <img src="https://img.shields.io/badge/TensorFlow-2.16.1-orange" alt="TensorFlow">
+  <img src="https://img.shields.io/badge/MobileNetV2-Transfer_Learning-yellow" alt="MobileNetV2">
+</p>
 
-    <h2>🚀 Instalación</h2>
-    <div class="terminal">
-        # Clonar el repositorio<br>
-        git clone https://github.com/tu-usuario/pet_classifier.git<br>
-        cd pet_classifier<br><br>
-        
-        # Crear entorno virtual (recomendado)<br>
-        python -m venv venv<br>
-        source venv/bin/activate  # Linux/Mac<br>
-        .\venv\Scripts\activate  # Windows<br><br>
-        
-        # Instalar dependencias<br>
-        pip install -r requirements.txt
-    </div>
+## 📌 Descripción
+Aplicación web que clasifica imágenes entre perros y gatos usando transfer learning con MobileNetV2 y una interfaz Flask con actualización en tiempo real del entrenamiento.
 
-    <h2>⚙️ Configuración</h2>
-    <p>Crea la estructura de directorios necesaria:</p>
-    <pre>data/
-├── train/
-│   ├── dogs/
-│   └── cats/
-└── validation/
-    ├── dogs/
-    └── cats/</pre>
+## 🚀 Instalación
 
-    <div class="note">
-        <strong>Nota:</strong> Las carpetas ya incluyen archivos <code>.gitkeep</code> para mantener la estructura.
-    </div>
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/AdierECO/pet_classifier.git
+cd pet_classifier
 
-    <h2>🖼️ Subir imágenes de entrenamiento</h2>
-    <ol>
-        <li>Accede a <code>/upload-train</code> en la aplicación</li>
-        <li>Selecciona imágenes de perros y gatos</li>
-        <li>El sistema las dividirá automáticamente en entrenamiento/validación</li>
-    </ol>
+# 2. Crear entorno virtual (Windows)
+python -m venv venv
+venv\Scripts\activate
 
-    <h2>🏋️ Entrenar el modelo</h2>
-    <div class="terminal">
-        # Ejecutar la aplicación<br>
-        python app.py<br><br>
-        
-        # Luego acceder a:<br>
-        http://localhost:5000/train<br><br>
-        
-        # Hacer clic en "Iniciar Entrenamiento"
-    </div>
+# 3. Instalar dependencias
+pip install -r requirements.txt
+```
 
-    <div class="warning">
-        <strong>Requisitos mínimos:</strong> Se recomienda GPU para entrenamiento. Con CPU puede ser muy lento.
-    </div>
+## ⚙️ Configuración
 
-    <h2>🔍 Realizar predicciones</h2>
-    <ol>
-        <li>Sube una imagen desde la página principal (<code>/</code>)</li>
-        <li>El modelo devolverá si es perro o gato con su confianza</li>
-    </ol>
+```bash
+Prepara tu dataset:
 
-    <h2>📊 Estructura del Proyecto</h2>
-    <pre>pet_classifier/
+Crea la estructura de carpetas:
+data/
+└── train/
+    ├── dogs/    # Coloca aquí imágenes de perros
+    └── cats/    # Coloca aquí imágenes de gatos
+
+Recomendado: Mínimo 100 imágenes por categoría (formato JPG/PNG)
+```
+
+## 🖥️ Uso
+
+```bash
+# Iniciar la aplicación Flask
+python app.py
+
+Accede a la interfaz web en: http://localhost:5000
+
+Funcionalidades principales:
+1. Entrenamiento: Monitoreo en tiempo real con Flask-SocketIO
+2. Predicción: Sube imágenes para clasificación
+3. Gestión de dataset: Carga imágenes directamente desde la web
+```
+
+## 📂 Estructura del Proyecto
+
+```bash
+pet_classifier/
 ├── app.py                # Aplicación principal Flask
-├── train.py              # Lógica de entrenamiento
-├── requirements.txt      # Dependencias
-├── static/               # Archivos estáticos
-│   └── uploads/          # Imágenes para predicción
+├── train.py              # Lógica de entrenamiento con MobileNetV2
+├── static/               # Archivos estáticos (uploads)
 ├── templates/            # Vistas HTML
-├── data/                 # Dataset de entrenamiento
-└── models/               # Modelos entrenados</pre>
+├── data/                 # Dataset de entrenamiento (no incluido)
+│   ├── train/            # Imágenes de entrenamiento
+│   └── validation/       # Validación automática (80/20)
+└── models/               # Modelos entrenados (generados automáticamente)
+```
 
-    <h2>📌 Notas Importantes</h2>
-    <ul>
-        <li>El modelo usa transfer learning con MobileNetV2</li>
-        <li>Incluye fine-tuning automático</li>
-        <li>Interfaz web con actualización en tiempo real del entrenamiento</li>
-    </ul>
+## 🏋️ Entrenamiento Avanzado
 
-    <h2>📄 Licencia</h2>
-    <p>MIT License - Libre para uso y modificación</p>
-</body>
-</html>
+```bash
+Opciones de entrenamiento:
+# Entrenamiento básico (congelando capas)
+python train.py --mode basic --epochs 20
+
+# Fine-tuning (descongelando capas superiores)
+python train.py --mode fine_tune --epochs 10
+
+Parámetros configurables:
+--batch_size: Tamaño del lote (default: 32)
+--learning_rate: Tasa de aprendizaje (default: 0.001)
+```
+
+## ⚠️ Notas Importantes
+
+```bash
+1. GPU altamente recomendada para entrenamiento (5x más rápido)
+2. El modelo usa Data Augmentation automático
+3. Incluye Early Stopping para evitar overfitting
+4. Los modelos se guardan en formato .keras (optimizados para producción)
+```
+
+## 📊 Métricas Esperadas
+
+| Métrica         | Entrenamiento | Validación |
+|-----------------|---------------|------------|
+| Precisión       | 92-96%        | 88-92%     |
+| Pérdida         | 0.10-0.15     | 0.15-0.20  |
+| Tiempo (GPU)    | ~5 min        |            |
+| Tiempo (CPU)    | ~30 min       |            |
+
+## 📄 Licencia
+MIT License - Libre para uso académico y comercial.
+
+<div align="center">
+  <p>✉️ <strong>Contacto</strong>: adierortix@gmail.com.com | 🌐 <a href="https://github.com/AdierECO">GitHub</a></p>
+</div>
