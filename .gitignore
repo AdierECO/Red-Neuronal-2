@@ -1,0 +1,31 @@
+# .gitignore para pet_classifier - versión específica
+
+# Excluir completamente estos directorios y su contenido
+/models/
+/data/
+/static/
+
+# Archivos de Python generados
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+venv/
+ENV/
+env/
+
+# Editor y IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de entorno y sensibles
+.env
+*.env
+secrets.py

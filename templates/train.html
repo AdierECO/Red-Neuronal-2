@@ -1,0 +1,295 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entrenamiento del Modelo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .progress {
+            height: 25px;
+        }
+        #training-log {
+            height: 200px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: monospace;
+        }
+        .stat-card {
+            transition: all 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <h1 class="text-center mb-4">Entrenamiento del Modelo</h1>
+        
+        <!-- Estadísticas -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="card stat-card h-100">
+                    <div class="card-header bg-primary text-white">
+                        Imágenes de Entrenamiento
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-1">Perros: <span class="badge bg-primary">{{ train_counts.dogs }}</span></p>
+                        <p>Gatos: <span class="badge bg-primary">{{ train_counts.cats }}</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card stat-card h-100">
+                    <div class="card-header bg-info text-white">
+                        Imágenes de Validación
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-1">Perros: <span class="badge bg-info">{{ val_counts.dogs }}</span></p>
+                        <p>Gatos: <span class="badge bg-info">{{ val_counts.cats }}</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stat-card h-100">
+                    <div class="card-header bg-success text-white">
+                        Acciones
+                    </div>
+                    <div class="card-body text-center">
+                        <a href="/upload-train" class="btn btn-outline-primary mb-2">Agregar más imágenes</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panel de Entrenamiento -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                Entrenar Modelo
+            </div>
+            <div class="card-body">
+                <div class="mt-4" id="training-section" style="display: none;">
+                    <h5>Progreso del Entrenamiento</h5>
+                    <div class="progress mb-2">
+                        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="training-log" class="mb-3"></div>
+                    
+                    <!-- Gráficas -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <canvas id="accuracyChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <canvas id="lossChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="results-section" style="display: none;">
+                        <div class="alert alert-success" id="final-message"></div>
+                        <div class="text-center">
+                            <a href="/" class="btn btn-primary">Ir al Clasificador</a>
+                            <button id="viewResultsBtn" class="btn btn-outline-primary ms-2">Ver Resultados Detallados</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="start-section" class="text-center py-4">
+                    <p class="lead">Preparado para entrenar el modelo con {{ train_counts.dogs + train_counts.cats }} imágenes de entrenamiento y {{ val_counts.dogs + val_counts.cats }} de validación.</p>
+                    <button id="startTrainBtn" class="btn btn-success btn-lg">
+                        <i class="bi bi-play-fill"></i> Iniciar Entrenamiento
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuración inicial
+        const socket = io();
+        const startSection = document.getElementById('start-section');
+        const startTrainBtn = document.getElementById('startTrainBtn');
+        const trainBtn = document.getElementById('trainBtn');
+        const trainingSection = document.getElementById('training-section');
+        const progressBar = document.getElementById('progress-bar');
+        const trainingLog = document.getElementById('training-log');
+        const resultsSection = document.getElementById('results-section');
+        const finalMessage = document.getElementById('final-message');
+        const viewResultsBtn = document.getElementById('viewResultsBtn');
+        
+        // Datos para gráficas
+        let accuracyChart, lossChart;
+        let epochsData = [];
+        let accuracyData = [];
+        let valAccuracyData = [];
+        let lossData = [];
+        let valLossData = [];
+        
+        // Inicializar gráficas
+        function initCharts() {
+            const accuracyCtx = document.getElementById('accuracyChart').getContext('2d');
+            accuracyChart = new Chart(accuracyCtx, {
+                type: 'line',
+                data: {
+                    labels: epochsData,
+                    datasets: [
+                        {
+                            label: 'Precisión Entrenamiento',
+                            data: accuracyData,
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Precisión Validación',
+                            data: valAccuracyData,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 0.5,
+                            max: 1.0
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Precisión por Época'
+                        }
+                    }
+                }
+            });
+            
+            const lossCtx = document.getElementById('lossChart').getContext('2d');
+            lossChart = new Chart(lossCtx, {
+                type: 'line',
+                data: {
+                    labels: epochsData,
+                    datasets: [
+                        {
+                            label: 'Pérdida Entrenamiento',
+                            data: lossData,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Pérdida Validación',
+                            data: valLossData,
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            backgroundColor: 'rgba(153, 102, 255, 0.1)',
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Pérdida por Época'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Evento para iniciar entrenamiento
+        startTrainBtn.addEventListener('click', () => {
+            startSection.style.display = 'none';
+            trainingSection.style.display = 'block';
+            initCharts();
+            
+            // Iniciar entrenamiento
+            fetch('/start-training', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).catch(err => {
+                trainingLog.innerHTML += `<div class="text-danger">Error al iniciar: ${err}</div>`;
+            });
+        });
+        
+        // Escuchar actualizaciones del entrenamiento
+        socket.on('training_update', (data) => {
+            progressBar.style.width = `${data.progress}%`;
+            
+            // Actualizar datos de gráficas
+            epochsData.push(data.epoch);
+            accuracyData.push(data.accuracy);
+            valAccuracyData.push(data.val_accuracy);
+            lossData.push(data.loss);
+            valLossData.push(data.val_loss);
+            
+            // Actualizar gráficas
+            accuracyChart.update();
+            lossChart.update();
+            
+            // Actualizar log
+            trainingLog.innerHTML += `
+                <div>Época ${data.epoch}/${data.total_epochs}</div>
+                <div>Pérdida: ${data.loss.toFixed(4)} | Precisión: ${(data.accuracy * 100).toFixed(2)}%</div>
+                <div>Validación: ${data.val_loss.toFixed(4)} | ${(data.val_accuracy * 100).toFixed(2)}%</div>
+                <hr>
+            `;
+            trainingLog.scrollTop = trainingLog.scrollHeight;
+        });
+        
+        socket.on('training_complete', (data) => {
+            progressBar.style.width = '100%';
+            progressBar.classList.remove('progress-bar-animated');
+            
+            let earlyStopMsg = '';
+            if (data.metrics.early_stopped) {
+                earlyStopMsg = `<p>Entrenamiento detenido temprano en época ${data.metrics.epochs_used}</p>`;
+            }
+            
+            finalMessage.innerHTML = `
+                <h4>${data.message}</h4>
+                ${earlyStopMsg}
+                <p>Épocas completadas: ${data.metrics.epochs_used}</p>
+                <p>Precisión final: ${(data.metrics.train_accuracy * 100).toFixed(2)}% (Entrenamiento)</p>
+                <p>Precisión validación: ${(data.metrics.val_accuracy * 100).toFixed(2)}%</p>
+            `;
+            resultsSection.style.display = 'block';
+        });
+        
+        socket.on('training_error', (data) => {
+            trainingLog.innerHTML += `<div class="text-danger">${data.message}</div>`;
+            startTrainBtn.disabled = false;
+            startTrainBtn.textContent = 'Reintentar Entrenamiento';
+        });
+        
+        // Ver resultados detallados
+        viewResultsBtn.addEventListener('click', () => {
+            window.location.href = '/results';
+        });
+    </script>
+</body>
+</html>

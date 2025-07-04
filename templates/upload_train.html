@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subir Imágenes para Entrenamiento</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .upload-box {
+            border: 2px dashed #6c757d;
+            padding: 2rem;
+            text-align: center;
+            margin: 1rem 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upload-box:hover {
+            border-color: #0d6efd;
+            background-color: #f8f9fa;
+        }
+        .category-box {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        #dogPreviews, #catPreviews {
+            max-height: 300px;
+            overflow-y: auto;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .preview-thumbnail {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            margin: 3px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            transition: transform 0.2s;
+        }
+        .preview-thumbnail:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+        #progressContainer {
+            display: none;
+            margin-top: 20px;
+        }
+        #fileCounter {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            z-index: 1000;
+        }
+        .total-count {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+        .batch-info {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <h1 class="text-center mb-4">Subir Imágenes para Entrenamiento</h1>
+        
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Las imágenes existentes se conservarán. Puedes subir más para aumentar tu conjunto de datos.
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="category-box">
+                    <h4>Perros <span class="total-count">(Total: {{ total_dogs }} imágenes)</span></h4>
+                    <div class="upload-box" id="dogDropZone">
+                        <p><i class="bi bi-cloud-arrow-up" style="font-size: 2rem;"></i></p>
+                        <p>Arrastra imágenes de perros aquí o haz clic para seleccionar</p>
+                        <p class="batch-info">Puedes seleccionar múltiples archivos a la vez</p>
+                        <input type="file" id="dogFileInput" class="d-none" accept="image/*" multiple>
+                    </div>
+                    <div class="mt-2" id="dogPreviews"></div>
+                    <div class="mt-2">
+                        <button class="btn btn-danger btn-sm" id="clearDogs">
+                            <i class="bi bi-trash"></i> Limpiar selección
+                        </button>
+                        <span class="ms-2" id="dogCount">0 imágenes seleccionadas</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="category-box">
+                    <h4>Gatos <span class="total-count">(Total: {{ total_cats }} imágenes)</span></h4>
+                    <div class="upload-box" id="catDropZone">
+                        <p><i class="bi bi-cloud-arrow-up" style="font-size: 2rem;"></i></p>
+                        <p>Arrastra imágenes de gatos aquí o haz clic para seleccionar</p>
+                        <p class="batch-info">Puedes seleccionar múltiples archivos a la vez</p>
+                        <input type="file" id="catFileInput" class="d-none" accept="image/*" multiple>
+                    </div>
+                    <div class="mt-2" id="catPreviews"></div>
+                    <div class="mt-2">
+                        <button class="btn btn-danger btn-sm" id="clearCats">
+                            <i class="bi bi-trash"></i> Limpiar selección
+                        </button>
+                        <span class="ms-2" id="catCount">0 imágenes seleccionadas</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header bg-primary text-white">
+                Configuración de Entrenamiento
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Proporción Train/Validation (%)</label>
+                    <input type="range" class="form-range" min="10" max="90" step="5" value="80" id="splitRatio">
+                    <div class="d-flex justify-content-between">
+                        <span>10% Validation</span>
+                        <span>90% Validation</span>
+                    </div>
+                    <div class="text-center mt-1">
+                        <strong>Configuración actual: <span id="ratioValue">80</span>% Train / <span id="validationValue">20</span>% Validation</strong>
+                    </div>
+                </div>
+                
+                <button type="button" id="uploadBtn" class="btn btn-primary w-100 py-3" disabled>
+                    <i class="bi bi-cloud-upload"></i> Subir Imágenes y Preparar Conjuntos
+                </button>
+            </div>
+        </div>
+        
+        <div id="progressContainer" class="card mt-4">
+            <div class="card-header bg-info text-white">
+                Progreso de la Subida
+            </div>
+            <div class="card-body">
+                <div class="progress mb-2">
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%"></div>
+                </div>
+                <div id="uploadStatus" class="text-center"></div>
+                <div id="batchProgress" class="text-center"></div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="/train" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Ir a Entrenamiento
+            </a>
+            <a href="/" class="btn btn-outline-primary ms-2">
+                <i class="bi bi-house"></i> Volver al Clasificador
+            </a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales
+        let currentPage = 1;
+        const filesPerPage = 200; // Procesar 200 archivos a la vez
+        let allDogFiles = [];
+        let allCatFiles = [];
+        let isUploading = false;
+        let totalBatches = 0;
+        let currentBatch = 0;
+
+        // Elementos del DOM
+        const dogFileInput = document.getElementById('dogFileInput');
+        const catFileInput = document.getElementById('catFileInput');
+        const dogPreviews = document.getElementById('dogPreviews');
+        const catPreviews = document.getElementById('catPreviews');
+        const dogCount = document.getElementById('dogCount');
+        const catCount = document.getElementById('catCount');
+        const clearDogs = document.getElementById('clearDogs');
+        const clearCats = document.getElementById('clearCats');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const splitRatio = document.getElementById('splitRatio');
+        const ratioValue = document.getElementById('ratioValue');
+        const validationValue = document.getElementById('validationValue');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const batchProgress = document.getElementById('batchProgress');
+
+        // Configurar eventos para perros
+        document.getElementById('dogDropZone').addEventListener('click', () => dogFileInput.click());
+        setupDropZone('dogDropZone', dogFileInput, 'dog');
+        
+        // Configurar eventos para gatos
+        document.getElementById('catDropZone').addEventListener('click', () => catFileInput.click());
+        setupDropZone('catDropZone', catFileInput, 'cat');
+        
+        // Eventos para limpiar
+        clearDogs.addEventListener('click', () => clearFiles('dog'));
+        clearCats.addEventListener('click', () => clearFiles('cat'));
+        
+        // Actualizar proporción
+        splitRatio.addEventListener('input', updateRatio);
+        updateRatio();
+        
+        // Configurar botón de subida
+        uploadBtn.addEventListener('click', uploadFiles);
+        
+        // Funciones
+        function setupDropZone(dropZoneId, fileInput, type) {
+            const dropZone = document.getElementById(dropZoneId);
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+                dropZone.addEventListener(event, preventDefaults, false);
+            });
+            
+            ['dragenter', 'dragover'].forEach(event => {
+                dropZone.addEventListener(event, () => {
+                    dropZone.style.borderColor = '#0d6efd';
+                    dropZone.style.backgroundColor = '#e7f1ff';
+                }, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(event => {
+                dropZone.addEventListener(event, () => {
+                    dropZone.style.borderColor = '#6c757d';
+                    dropZone.style.backgroundColor = '';
+                }, false);
+            });
+            
+            dropZone.addEventListener('drop', handleDrop, false);
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleFiles(e.target.files, type);
+                }
+            });
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length) {
+                    handleFiles(files, type);
+                }
+            }
+        }
+        
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        function handleFiles(files, type) {
+            const filesArray = Array.from(files);
+            
+            if (type === 'dog') {
+                allDogFiles = [...allDogFiles, ...filesArray];
+                updatePreviews(allDogFiles, dogPreviews);
+                dogCount.textContent = `${allDogFiles.length} imágenes seleccionadas`;
+            } else {
+                allCatFiles = [...allCatFiles, ...filesArray];
+                updatePreviews(allCatFiles, catPreviews);
+                catCount.textContent = `${allCatFiles.length} imágenes seleccionadas`;
+            }
+            
+            updateUploadButton();
+            updateFileCounter();
+        }
+        
+        function updatePreviews(files, container) {
+            container.innerHTML = '';
+            const maxPreviews = Math.min(files.length, 30); // Mostrar máximo 30 miniaturas
+            
+            for (let i = 0; i < maxPreviews; i++) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = document.createElement('img');
+                    img.src = event.target.result;
+                    img.className = 'preview-thumbnail';
+                    img.title = files[i].name;
+                    container.appendChild(img);
+                };
+                reader.readAsDataURL(files[i]);
+            }
+            
+            if (files.length > maxPreviews) {
+                const moreText = document.createElement('div');
+                moreText.className = 'w-100 text-center mt-2';
+                moreText.textContent = `+ ${files.length - maxPreviews} más...`;
+                container.appendChild(moreText);
+            }
+        }
+        
+        function clearFiles(type) {
+            if (type === 'dog') {
+                allDogFiles = [];
+                dogPreviews.innerHTML = '';
+                dogCount.textContent = '0 imágenes seleccionadas';
+                dogFileInput.value = '';
+            } else {
+                allCatFiles = [];
+                catPreviews.innerHTML = '';
+                catCount.textContent = '0 imágenes seleccionadas';
+                catFileInput.value = '';
+            }
+            updateUploadButton();
+            updateFileCounter();
+        }
+        
+        function updateRatio() {
+            const trainRatio = parseInt(splitRatio.value);
+            ratioValue.textContent = trainRatio;
+            validationValue.textContent = 100 - trainRatio;
+        }
+        
+        function updateUploadButton() {
+            uploadBtn.disabled = (allDogFiles.length === 0 && allCatFiles.length === 0) || isUploading;
+        }
+        
+        function updateFileCounter() {
+            const totalFiles = allDogFiles.length + allCatFiles.length;
+            if (totalFiles > 0) {
+                if (!document.getElementById('fileCounter')) {
+                    const counter = document.createElement('div');
+                    counter.id = 'fileCounter';
+                    document.body.appendChild(counter);
+                }
+                document.getElementById('fileCounter').textContent = 
+                    `Archivos seleccionados: ${totalFiles} (Perros: ${allDogFiles.length}, Gatos: ${allCatFiles.length})`;
+            } else if (document.getElementById('fileCounter')) {
+                document.getElementById('fileCounter').remove();
+            }
+        }
+        
+        async function uploadFiles() {
+            if (isUploading) return;
+            if (allDogFiles.length === 0 && allCatFiles.length === 0) return;
+            
+            isUploading = true;
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<i class="bi bi-cloud-upload"></i> Subiendo...';
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            uploadStatus.textContent = 'Preparando imágenes...';
+            batchProgress.textContent = '';
+            
+            try {
+                // Calcular total de batches
+                const totalDogBatches = Math.ceil(allDogFiles.length / filesPerPage);
+                const totalCatBatches = Math.ceil(allCatFiles.length / filesPerPage);
+                totalBatches = totalDogBatches + totalCatBatches;
+                currentBatch = 0;
+                
+                // Procesar perros por lotes
+                if (allDogFiles.length > 0) {
+                    await processBatch(allDogFiles, 'dogs', totalDogBatches);
+                }
+                
+                // Procesar gatos por lotes
+                if (allCatFiles.length > 0) {
+                    await processBatch(allCatFiles, 'cats', totalCatBatches);
+                }
+                
+                // Obtener conteo final
+                const response = await fetch('/get-image-counts');
+                const counts = await response.json();
+                
+                uploadStatus.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i> ¡Todas las imágenes se subieron correctamente!
+                    </div>
+                    <div class="text-start">
+                        <p><strong>Total Perros:</strong> ${counts.dogs} (${Math.round(counts.dogs * parseInt(splitRatio.value) / 100)} train, ${Math.round(counts.dogs * (100 - parseInt(splitRatio.value)) / 100)} validation)</p>
+                        <p><strong>Total Gatos:</strong> ${counts.cats} (${Math.round(counts.cats * parseInt(splitRatio.value) / 100)} train, ${Math.round(counts.cats * (100 - parseInt(splitRatio.value)) / 100)} validation)</p>
+                    </div>
+                `;
+                
+                // Redirigir después de 3 segundos
+                setTimeout(() => {
+                    window.location.href = '/train';
+                }, 3000);
+                
+            } catch (error) {
+                uploadStatus.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i> Error: ${error.message}
+                    </div>
+                `;
+            } finally {
+                isUploading = false;
+                progressBar.style.width = '100%';
+                allDogFiles = [];
+                allCatFiles = [];
+                updatePreviews(allDogFiles, dogPreviews);
+                updatePreviews(allCatFiles, catPreviews);
+                dogCount.textContent = '0 imágenes seleccionadas';
+                catCount.textContent = '0 imágenes seleccionadas';
+                updateUploadButton();
+                updateFileCounter();
+                uploadBtn.innerHTML = '<i class="bi bi-cloud-upload"></i> Subir Imágenes y Preparar Conjuntos';
+            }
+        }
+
+        // Función para procesar por lotes
+        async function processBatch(files, type, typeBatches) {
+            const totalFiles = files.length;
+            
+            for (let i = 0; i < typeBatches; i++) {
+                const start = i * filesPerPage;
+                const end = start + filesPerPage;
+                const batch = files.slice(start, end);
+                
+                // Actualizar progreso
+                currentBatch++;
+                const overallProgress = Math.floor((currentBatch / totalBatches) * 100);
+                const batchProgressValue = Math.floor((i + 1) / typeBatches * 100);
+                
+                progressBar.style.width = `${overallProgress}%`;
+                uploadStatus.textContent = `Subiendo ${type}...`;
+                batchProgress.textContent = `Lote ${currentBatch} de ${totalBatches} (${batchProgressValue}% completado)`;
+                
+                // Crear FormData para el lote actual
+                const formData = new FormData();
+                batch.forEach(file => formData.append(type, file));
+                formData.append('train_ratio', parseInt(splitRatio.value) / 100);
+                
+                // Enviar lote al servidor
+                const response = await fetch('/upload-training-batch', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Error en la subida');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
